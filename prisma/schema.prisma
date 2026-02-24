@@ -1,0 +1,150 @@
+// Watan — Professional Network for Palestinian Talent
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Core Models ───
+
+model User {
+  id            String   @id @default(uuid())
+  clerkId       String   @unique
+  email         String   @unique
+  firstName     String
+  lastName      String
+  headline      String?
+  bio           String?
+  location      String?
+  skills        String[]
+  profileImage  String?
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  companies     Company[]     @relation("CompanyOwner")
+  reviews       Review[]      @relation("ReviewAuthor")
+  applications  Application[] @relation("ApplicationUser")
+  postedJobs    Job[]         @relation("JobPoster")
+
+  @@map("users")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  industry    String?
+  size        String?
+  location    String?
+  logo        String?
+  website     String?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ownerId     String
+  owner       User      @relation("CompanyOwner", fields: [ownerId], references: [id])
+  jobs        Job[]     @relation("CompanyJobs")
+  reviews     Review[]  @relation("CompanyReviews")
+
+  @@map("companies")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  title         String
+  description   String
+  type          JobType   @default(FULL_TIME)
+  location      String?
+  salaryMin     Int?
+  salaryMax     Int?
+  currency      String?   @default("USD")
+  requirements  String[]
+  status        JobStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  companyId     String
+  company       Company       @relation("CompanyJobs", fields: [companyId], references: [id])
+  postedById    String
+  postedBy      User          @relation("JobPoster", fields: [postedById], references: [id])
+  applications  Application[] @relation("JobApplications")
+
+  @@map("jobs")
+}
+
+model Review {
+  id          String       @id @default(uuid())
+  rating      Int
+  title       String
+  content     String
+  isAnonymous Boolean      @default(false)
+  status      ReviewStatus @default(PUBLISHED)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  authorId    String
+  author      User    @relation("ReviewAuthor", fields: [authorId], references: [id])
+  companyId   String
+  company     Company @relation("CompanyReviews", fields: [companyId], references: [id])
+
+  @@map("reviews")
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  coverLetter String?
+  resumeUrl   String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  jobId       String
+  job         Job  @relation("JobApplications", fields: [jobId], references: [id])
+  userId      String
+  user        User @relation("ApplicationUser", fields: [userId], references: [id])
+
+  @@map("applications")
+}
+
+// ─── Enums ───
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  REMOTE
+  INTERNSHIP
+}
+
+enum JobStatus {
+  ACTIVE
+  CLOSED
+  DRAFT
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  PENDING
+  FLAGGED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  ACCEPTED
+  REJECTED
+}
